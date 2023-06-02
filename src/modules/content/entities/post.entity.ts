@@ -3,7 +3,6 @@ import {
     Column,
     CreateDateColumn,
     DeleteDateColumn,
-    Entity,
     Index,
     JoinTable,
     ManyToMany,
@@ -22,7 +21,6 @@ import { CommentEntity } from './comment.entity';
  * 文章模型
  */
 @Exclude()
-@Entity('content_posts')
 export class PostEntity extends BaseEntity {
     @Expose()
     @Column({ comment: '文章标题' })

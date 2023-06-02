@@ -3,6 +3,8 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    JoinTable,
+    ManyToMany,
     ManyToOne,
     Tree,
     TreeChildren,
@@ -58,5 +60,10 @@ export class CommentEntity extends BaseEntity {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
     })
-    user!: UserEntity;
+    creator!: UserEntity;
+
+    @Expose()
+    @ManyToMany((type) => UserEntity, (user) => user.mentionedInComments)
+    @JoinTable()
+    mentionedUsers: UserEntity[];
 }

@@ -5,7 +5,7 @@ import { BaseEntity } from '@/modules/database/base';
 import { TaskEntity } from './task.entity';
 
 @Entity('task_histories')
-export class HistoryEntity extends BaseEntity {
+export class TaskHistoryEntity extends BaseEntity {
     @Column({ comment: '操作描述' })
     description: string;
 

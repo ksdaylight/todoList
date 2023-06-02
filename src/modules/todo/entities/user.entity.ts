@@ -5,6 +5,7 @@ import {
     CreateDateColumn,
     DeleteDateColumn,
     Entity,
+    ManyToMany,
     OneToMany,
     UpdateDateColumn,
 } from 'typeorm';
@@ -83,6 +84,16 @@ export class UserEntity extends BaseEntity {
     @OneToMany(() => TaskEntity, (task) => task.creator)
     tasks: TaskEntity[];
 
-    @OneToMany(() => CommentEntity, (comment) => comment.user, { cascade: true })
+    @OneToMany(() => CommentEntity, (comment) => comment.creator, { cascade: true })
     comments: CommentEntity[];
+
+    @ManyToMany(() => TaskEntity, (task) => task.assignees)
+    assignedTasks: TaskEntity[];
+
+    @ManyToMany(() => TaskEntity, (task) => task.watchers)
+    watchedTasks: TaskEntity[];
+
+    @Expose({ groups: ['user-detail', 'user-list'] })
+    @ManyToMany((type) => CommentEntity, (comment) => comment.mentionedUsers)
+    mentionedInComments: CommentEntity[];
 }

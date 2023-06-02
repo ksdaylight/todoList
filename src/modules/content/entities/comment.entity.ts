@@ -1,13 +1,5 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    ManyToOne,
-    Tree,
-    TreeChildren,
-    TreeParent,
-} from 'typeorm';
+import { Column, CreateDateColumn, ManyToOne, Tree, TreeChildren, TreeParent } from 'typeorm';
 
 import { BaseEntity } from '@/modules/database/base';
 
@@ -18,7 +10,6 @@ import { PostEntity } from './post.entity';
  */
 @Exclude()
 @Tree('materialized-path')
-@Entity('content_comments')
 export class CommentEntity extends BaseEntity {
     @Expose()
     @Column({ comment: '评论内容', type: 'longtext' })
