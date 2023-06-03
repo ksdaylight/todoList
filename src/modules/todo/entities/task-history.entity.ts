@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { Column, Entity, ManyToOne } from 'typeorm';
 
 import { BaseEntity } from '@/modules/database/base';
@@ -9,6 +10,7 @@ export class TaskHistoryEntity extends BaseEntity {
     @Column({ comment: '操作描述' })
     description: string;
 
+    @Type(() => Date)
     @Column({ comment: '操作时间', type: 'timestamp' })
     operationTime: Date;
 

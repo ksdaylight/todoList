@@ -14,6 +14,8 @@ import {
 
 import { BaseEntity } from '@/modules/database/base';
 
+import { TaskStatus } from '../constants';
+
 import { CommentEntity } from './comment.entity';
 import { TaskHistoryEntity } from './task-history.entity';
 import { UserEntity } from './user.entity';
@@ -29,8 +31,15 @@ export class TaskEntity extends BaseEntity {
     @Column({ comment: '任务描述', nullable: true })
     description: string;
 
+    @Type(() => Date)
     @Column({ comment: '到期时间', type: 'timestamp' })
     dueDate: Date;
+
+    @Column({ type: 'enum', enum: TaskStatus, comment: '任务状态' })
+    status: TaskStatus;
+
+    @ManyToOne(() => UserEntity, (user) => user.distributedTasks)
+    distributor: UserEntity;
 
     @ManyToMany(() => UserEntity, (user) => user.assignedTasks)
     @JoinTable()

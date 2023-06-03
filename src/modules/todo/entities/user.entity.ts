@@ -70,9 +70,6 @@ export class UserEntity extends BaseEntity {
     })
     deletedAt!: Date;
 
-    @Expose({ groups: ['user-detail', 'user-list'] })
-    trashed!: boolean;
-
     @OneToMany((type) => MessageEntity, (message) => message.sender, {
         cascade: true,
     })
@@ -86,6 +83,9 @@ export class UserEntity extends BaseEntity {
 
     @OneToMany(() => CommentEntity, (comment) => comment.creator, { cascade: true })
     comments: CommentEntity[];
+
+    @OneToMany(() => TaskEntity, (task) => task.distributor)
+    distributedTasks: TaskEntity[];
 
     @ManyToMany(() => TaskEntity, (task) => task.assignees)
     assignedTasks: TaskEntity[];
