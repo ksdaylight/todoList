@@ -45,7 +45,7 @@ export abstract class BaseService<
      * @param params 查询参数
      * @param callback 回调查询
      */
-    async list(options?: P, callback?: QueryHook<E>): Promise<E[]> {
+    protected async list(options?: P, callback?: QueryHook<E>): Promise<E[]> {
         const { trashed: isTrashed = false } = options ?? {};
         const trashed = isTrashed || SelectTrashMode.NONE;
         if (this.repository instanceof BaseTreeRepository) {

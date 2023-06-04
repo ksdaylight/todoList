@@ -10,9 +10,13 @@ import {
     ValidateNested,
     IsDefined,
     IsEnum,
+    IsBoolean,
+    ArrayMinSize,
+    ArrayNotEmpty,
 } from 'class-validator';
 
 import { DtoValidation } from '@/modules/core/decorators';
+import { toBoolean } from '@/modules/core/helpers';
 import { IsDataExist } from '@/modules/database/constraints';
 
 import { ListWithTrashedQueryDto } from '@/modules/restful/dtos';
@@ -110,14 +114,19 @@ export class QueryTaskDto extends ListWithTrashedQueryDto {
     distributor?: string;
 
     @ApiPropertyOptional({ description: '负责人ID' })
+    @IsArray({ groups: ['create'] })
+    @ArrayNotEmpty({ groups: ['create'] })
+    @ArrayMinSize(1, { groups: ['create'] })
     @IsOptional({ always: true })
-    assignee?: string;
+    assignees?: string[];
 
     @ApiPropertyOptional({ description: '关注人ID' })
     @IsOptional({ always: true })
     watchers?: string[];
 
     @ApiPropertyOptional({ description: '任务完成状态' })
+    @Transform(({ value }) => toBoolean(value))
+    @IsBoolean()
     @IsOptional({ always: true })
     status?: boolean;
 
@@ -129,6 +138,11 @@ export class QueryTaskDto extends ListWithTrashedQueryDto {
     @IsOptional({ always: true })
     createdTime?: Date;
 
+    @ApiPropertyOptional({
+        description: '排序规则: 默认为 ',
+        enum: TaskOrderType,
+        default: TaskOrderType.CREATED,
+    })
     @IsEnum(TaskOrderType, {
         message: `排序规则必须是${Object.values(TaskOrderType).join(',')}其中一项`,
     })

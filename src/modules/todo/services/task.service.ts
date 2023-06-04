@@ -3,11 +3,13 @@ import { isFunction, isNil, pick } from 'lodash';
 
 import { EntityNotFoundError, In, SelectQueryBuilder } from 'typeorm';
 
+import { toBoolean } from '@/modules/core/helpers';
 import { BaseService } from '@/modules/database/base';
 
-import { QueryHook } from '@/modules/database/types';
+import { paginate } from '@/modules/database/helpers';
+import { PaginateOptions, PaginateReturn, QueryHook } from '@/modules/database/types';
 
-import { TaskOrderType } from '../constants';
+import { TaskOrderType, TaskStatus } from '../constants';
 import {
     CreateTaskWithSubTasksDto,
     ManageCreateTaskWithSubTasksDto,
@@ -22,7 +24,7 @@ type FindParams = {
     [key in keyof Omit<QueryTaskDto, 'limit' | 'page'>]: QueryTaskDto[key];
 };
 @Injectable()
-export class TaskService extends BaseService<TaskEntity, TaskRepository> {
+export class TaskService extends BaseService<TaskEntity, TaskRepository, FindParams> {
     protected enableTrash = true;
 
     constructor(
@@ -196,7 +198,6 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
             if (newEntity) (task[fieldName] as UserEntity) = newEntity;
         }
 
-        // Save the task history entry
         const history = new TaskHistoryEntity();
         history.description = `Updated ${fieldName} to ${
             Array.isArray(task[fieldName])
@@ -204,7 +205,7 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
                       .map((entity: UserEntity) => entity.username)
                       .join(', ')
                 : (task[fieldName] as UserEntity).username
-        }`;
+        }`; // 暂不细化
         history.operationTime = new Date();
         history.task = task;
         // const savedHistory = await this.taskHistoryRepository.save(history);
@@ -227,6 +228,15 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
         return parent;
     }
 
+    async paginate(
+        options?: PaginateOptions & FindParams,
+        callback?: QueryHook<TaskEntity>,
+    ): Promise<PaginateReturn<TaskEntity>> {
+        const queryOptions = options ?? {};
+        const qb = await this.buildListQB(this.repository.buildBaseQB(), queryOptions, callback);
+        return paginate(qb, options);
+    }
+
     protected async buildListQB(
         queryBuilder: SelectQueryBuilder<TaskEntity>,
         options: FindParams = {},
@@ -235,7 +245,7 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
         const {
             creator,
             distributor,
-            assignee,
+            assignees,
             watchers,
             status,
             dueDate,
@@ -249,24 +259,40 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
             qb.andWhere('task.creator.id = :creator', { creator });
         }
         if (distributor) {
-            qb.leftJoinAndSelect('task.distributor', 'distributor').andWhere(
-                'distributor.id = :distributor',
-                { distributor },
-            );
+            qb.andWhere('task.distributor.id = :distributor', { distributor });
         }
-        if (assignee) {
-            qb.leftJoinAndSelect('task.assignees', 'assignee').andWhere('assignee.id = :assignee', {
-                assignee,
-            });
+        if (assignees) {
+            // 长度暂不考虑
+            let assigneesArray;
+            if (typeof assignees === 'string') {
+                assigneesArray = [assignees];
+            } else {
+                assigneesArray = assignees;
+            }
+
+            qb.leftJoinAndSelect('task.assignees', 'assignees').andWhere(
+                'assignees.id IN (:...assigneesArray)',
+                {
+                    assigneesArray,
+                },
+            );
         }
         if (watchers) {
-            qb.innerJoinAndSelect('task.watchers', 'watcher').andWhere(
-                'watcher.id IN (:...watchers)',
-                { watchers },
+            let watchersArray;
+            if (typeof watchers === 'string') {
+                watchersArray = [watchers];
+            } else {
+                watchersArray = watchers;
+            }
+            qb.innerJoinAndSelect('task.watchers', 'watchers').andWhere(
+                'watchers.id IN (:...watchersArray )',
+                { watchersArray },
             );
         }
-        if (status) {
-            qb.andWhere('task.status = :status', { status });
+        if (!isNil(status)) {
+            qb.andWhere('task.status = :status', {
+                status: toBoolean(status) ? TaskStatus.COMPLETED : TaskStatus.INCOMPLETE,
+            });
         }
         if (dueDate) {
             qb.andWhere('task.dueDate <= :dueDate', { dueDate });
