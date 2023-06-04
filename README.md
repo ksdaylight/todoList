@@ -26,11 +26,18 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+##  some screenshots
+![](./Quicker_20230604_174255.png)
+![](./Quicker_20230604_174423.png)
+![](./Quicker_20230604_174459.png)
 ## Installation
 
 ```bash
 $ pnpm install
 ```
+## Configure environment variables
+
+Create a `.env` file in the root directory of the project and configure the necessary environment variables. You can use the provided `.env.example` file as a reference. 
 
 ## Running the app
 
