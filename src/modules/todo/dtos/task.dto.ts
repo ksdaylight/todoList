@@ -93,6 +93,8 @@ export class ManageUpdateTaskDto extends PartialType(ManageCreateTaskDto) {
     @IsDefined({ groups: ['update'], message: '任务ID必须指定' })
     id: string;
 }
+@DtoValidation({ groups: ['update'] })
+export class UpdateTasksDto extends OmitType(ManageUpdateTaskDto, ['creator']) {}
 @DtoValidation({ groups: ['query'] })
 export class QueryTaskDto extends ListWithTrashedQueryDto {
     @ApiPropertyOptional({ description: '创建者ID' })

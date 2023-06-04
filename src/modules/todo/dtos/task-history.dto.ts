@@ -7,7 +7,7 @@ import { DtoValidation } from '@/modules/core/decorators';
 export class QueryTaskHistoryDto {
     @ApiProperty({
         description: '需要查询的任务的ID',
-        type: [String],
+        type: String,
     })
     @IsUUID(undefined, {
         each: true,

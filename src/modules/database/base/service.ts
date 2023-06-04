@@ -9,7 +9,7 @@ import { QueryHook, ServiceListQueryOption, PaginateReturn, PaginateOptions } fr
 import { BaseRepository } from './repository';
 import { BaseTreeRepository } from './tree.repository';
 /**
- *  CURD操作服务
+ *  CRUD操作服务
  */
 export abstract class BaseService<
     E extends ObjectLiteral,

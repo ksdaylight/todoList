@@ -1,25 +1,29 @@
-import { Controller, Get, Param, SerializeOptions } from '@nestjs/common';
+import { Controller, Get, Query, SerializeOptions } from '@nestjs/common';
 
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { BaseControllerWithTrash } from '@/modules/restful/base';
 
+import { Depends } from '@/modules/restful/decorators';
+
 import { QueryTaskHistoryDto } from '../dtos';
 import { TaskHistoryService } from '../services';
+import { TodoModule } from '../todo.module';
 
-@ApiTags('箱号管理')
+@ApiTags('任务历史记录管理')
+@Depends(TodoModule)
 @Controller('task-history')
 export class TaskHistoryController extends BaseControllerWithTrash<TaskHistoryService> {
     constructor(protected service: TaskHistoryService) {
         super(service);
     }
 
-    @Get()
-    @ApiOperation({ summary: '请求创建多少个新箱子' })
+    @Get('task')
+    @ApiOperation({ summary: '查询任务的历史记录' })
     // @ApiOkResponse({ type: [BoxResponseDto] })
     @SerializeOptions({ groups: [] }) // `${TransformerId.STORAGE_BOX}-create`
     async queryTaskHistory(
-        @Param()
+        @Query()
         data: QueryTaskHistoryDto,
     ) {
         return this.service.queryTaskHistory(data);

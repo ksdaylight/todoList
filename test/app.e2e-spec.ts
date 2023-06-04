@@ -1,16 +1,27 @@
 /* eslint-disable jest/expect-expect */
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import request = require('supertest');
+import request from 'supertest';
 
-import { AppModule } from '../src/app.module';
+import * as configs from '@/config';
+
+import { App } from '@/modules/core/app';
+import { createBootModule } from '@/modules/core/helpers/app';
+import { TodoModule } from '@/modules/todo/todo.module';
 
 describe('AppController (e2e)', () => {
     let app: INestApplication;
 
     beforeEach(async () => {
+        const configure = await App.buildConfigure(configs);
+        const { BootModule } = await createBootModule(
+            { configure },
+            {
+                modules: [TodoModule],
+            },
+        );
         const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [AppModule],
+            imports: [BootModule],
         }).compile();
 
         app = moduleFixture.createNestApplication();

@@ -3,18 +3,20 @@ import { Controller } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
 import { BaseControllerWithTrash } from '@/modules/restful/base';
-import { Crud } from '@/modules/restful/decorators';
+import { Crud, Depends } from '@/modules/restful/decorators';
 
 import { createHookOption } from '@/modules/restful/helpers';
 
 import { ManageCreateTaskWithSubTasksDto, ManageUpdateTaskDto, QueryTaskDto } from '../dtos';
 import { TaskService } from '../services';
+import { TodoModule } from '../todo.module';
 
 /**
  * 任务控制器
  */
-@ApiTags('入仓指令单管理')
-@Crud({
+@ApiTags('任务管理')
+@Depends(TodoModule)
+@Crud(async () => ({
     id: 'task',
     enabled: [
         {
@@ -59,10 +61,10 @@ import { TaskService } from '../services';
     ],
     dtos: {
         store: ManageCreateTaskWithSubTasksDto,
-        update: ManageUpdateTaskDto, // 暂不区分前后台接口
+        update: ManageUpdateTaskDto, // 暂不区分前后台接口,前台用户接口就是通过jwt等方式析出userId即可
         list: QueryTaskDto,
     },
-})
+}))
 @Controller('task')
 export class TaskController extends BaseControllerWithTrash<TaskService> {
     constructor(protected service: TaskService) {

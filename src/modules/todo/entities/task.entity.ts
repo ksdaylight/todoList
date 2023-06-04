@@ -10,6 +10,7 @@ import {
     CreateDateColumn,
     DeleteDateColumn,
     ManyToOne,
+    Tree,
 } from 'typeorm';
 
 import { BaseEntity } from '@/modules/database/base';
@@ -20,6 +21,7 @@ import { CommentEntity } from './comment.entity';
 import { TaskHistoryEntity } from './task-history.entity';
 import { UserEntity } from './user.entity';
 
+@Tree('materialized-path')
 @Entity('tasks')
 export class TaskEntity extends BaseEntity {
     @Column({ comment: '任务标题' })
@@ -27,6 +29,9 @@ export class TaskEntity extends BaseEntity {
 
     @ManyToOne(() => UserEntity, (user) => user.tasks)
     creator: UserEntity;
+
+    @Expose()
+    depth = 0;
 
     @Column({ comment: '任务描述', nullable: true })
     description: string;
@@ -52,7 +57,7 @@ export class TaskEntity extends BaseEntity {
     @OneToMany(() => CommentEntity, (comment) => comment.task, { cascade: true })
     comments: CommentEntity[];
 
-    @OneToMany(() => TaskHistoryEntity, (history) => history.task)
+    @OneToMany(() => TaskHistoryEntity, (history) => history.task, { cascade: true })
     histories: TaskHistoryEntity[];
 
     @TreeParent()

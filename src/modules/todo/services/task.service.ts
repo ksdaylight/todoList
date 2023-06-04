@@ -1,4 +1,5 @@
-import { isFunction, isNil, omit } from 'lodash';
+import { Injectable } from '@nestjs/common';
+import { isFunction, isNil, pick } from 'lodash';
 
 import { EntityNotFoundError, In, SelectQueryBuilder } from 'typeorm';
 
@@ -12,13 +13,15 @@ import {
     ManageCreateTaskWithSubTasksDto,
     ManageUpdateTaskDto,
     QueryTaskDto,
+    UpdateTasksDto,
 } from '../dtos';
-import { TaskEntity, TaskHistoryEntity } from '../entities';
+import { TaskEntity, TaskHistoryEntity, UserEntity } from '../entities';
 import { TaskHistoryRepository, TaskRepository, UserRepository } from '../repositories';
 
 type FindParams = {
     [key in keyof Omit<QueryTaskDto, 'limit' | 'page'>]: QueryTaskDto[key];
 };
+@Injectable()
 export class TaskService extends BaseService<TaskEntity, TaskRepository> {
     protected enableTrash = true;
 
@@ -39,8 +42,8 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
             .leftJoinAndSelect(`${this.repository.qbName}.distributor`, 'distributor')
             .leftJoinAndSelect(`${this.repository.qbName}.assignees`, 'assignees')
             .leftJoinAndSelect(`${this.repository.qbName}.watchers`, 'watchers')
-            .leftJoinAndSelect(`${this.repository.qbName}.comments`, 'comments');
-
+            .leftJoinAndSelect(`${this.repository.qbName}.comments`, 'comments')
+            .where(`${this.repository.qbName}.id = :id`, { id });
         qb = !isNil(callback) && isFunction(callback) ? await callback(qb) : qb;
         const item = await qb.getOne();
         if (!item) throw new EntityNotFoundError(TaskEntity, `The Task ${id} does not exist!`);
@@ -60,7 +63,7 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
         creator,
         ...data
     }: (CreateTaskWithSubTasksDto & { creator: string }) | ManageCreateTaskWithSubTasksDto) {
-        const creatorUser = await this.getCurrentUser(creator);
+        const creatorUser = await this.getCurrentUser(creator); // assume
         // 创建主任务
         const createTaskDto = {
             ...data,
@@ -123,24 +126,34 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
      * 更新任务
      * @param data
      */
-    async update(data: ManageUpdateTaskDto) {
+    async update({
+        creator,
+        ...data
+    }: (UpdateTasksDto & { creator: string }) | ManageUpdateTaskDto) {
+        const task = await this.detail(data.id);
+        const creatorUser = await this.getCurrentUser(creator); // assume
+        for (const prop in pick(data, ['title', 'description', 'dueDate', 'status'])) {
+            if (prop in task && (data as any)[prop] !== (task as any)[prop]) {
+                const history = new TaskHistoryEntity();
+                history.description = `${creatorUser.username} Updated ${prop} from ${
+                    (task as any)[prop]
+                } to ${(data as any)[prop]}`;
+                history.operationTime = new Date();
+                history.task = task;
+                task.histories.push(history);
+
+                (task as any)[prop] = (data as any)[prop];
+            }
+        }
+
+        await this.updateTaskEntity(task, 'assignees', data.assignees, this.userRepository);
+        await this.updateTaskEntity(task, 'watchers', data.watchers, this.userRepository);
+        await this.updateTaskEntity(task, 'creator', creator, this.userRepository);
+        await this.updateTaskEntity(task, 'distributor', data.distributor, this.userRepository);
+
         const parent = await this.getParent(data.id, data.parent);
 
-        const updateTaskDto = {
-            ...omit(data, ['id', 'parent', 'creator']),
-            distributor: data.distributor
-                ? await this.userRepository.findOneBy({ id: data.distributor })
-                : null,
-            assignees: Array.isArray(data.assignees)
-                ? await this.userRepository.findBy({ id: In(data.assignees) })
-                : [],
-            watchers: Array.isArray(data.watchers)
-                ? await this.userRepository.findBy({ id: In(data.watchers) })
-                : [],
-        };
-        await this.repository.update(data.id, updateTaskDto);
-
-        const task = await this.detail(data.id);
+        await this.repository.save(task);
         const shouldUpdateParent =
             (!isNil(task.parent) && !isNil(parent) && task.parent.id !== parent.id) ||
             (isNil(task.parent) && !isNil(parent)) ||
@@ -152,7 +165,50 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
             await this.repository.save(task);
         }
 
-        return task;
+        return this.detail(data.id);
+    }
+
+    async updateTaskEntity(
+        task: TaskEntity,
+        fieldName: keyof TaskEntity,
+        newIds: string | string[],
+        repository: UserRepository,
+    ): Promise<void> {
+        if (Array.isArray(newIds)) {
+            // 处理ID列表
+            // 需要保留的
+            const users = task[fieldName] as UserEntity[];
+            const idsToKeep = users
+                .filter((entity) => newIds.includes(entity.id))
+                .map((entity) => entity.id);
+            // 新添加的
+            const newEntityIds = newIds.filter(
+                (id) => !users.map((entity) => entity.id).includes(id),
+            );
+            const newEntities = await repository.findBy({ id: In(newEntityIds) });
+            (task[fieldName] as UserEntity[]) = [
+                ...users.filter((entity) => idsToKeep.includes(entity.id)),
+                ...newEntities,
+            ];
+        } else {
+            // 处理单个ID
+            const newEntity = await repository.findOneBy({ id: newIds });
+            if (newEntity) (task[fieldName] as UserEntity) = newEntity;
+        }
+
+        // Save the task history entry
+        const history = new TaskHistoryEntity();
+        history.description = `Updated ${fieldName} to ${
+            Array.isArray(task[fieldName])
+                ? (task[fieldName] as UserEntity[])
+                      .map((entity: UserEntity) => entity.username)
+                      .join(', ')
+                : (task[fieldName] as UserEntity).username
+        }`;
+        history.operationTime = new Date();
+        history.task = task;
+        // const savedHistory = await this.taskHistoryRepository.save(history);
+        task.histories.push(history);
     }
 
     /**
@@ -238,7 +294,7 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository> {
             case TaskOrderType.DUE_DATE:
                 return qb.orderBy('task.dueDate', 'DESC');
             default:
-                return qb.orderBy('post.createdAt', 'DESC').addOrderBy('post.dueDate', 'DESC');
+                return qb.orderBy('task.createdAt', 'DESC').addOrderBy('task.dueDate', 'DESC');
         }
     }
 }

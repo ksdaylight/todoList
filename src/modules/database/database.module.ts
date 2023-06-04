@@ -1,29 +1,43 @@
-import { DynamicModule, Module, Provider, Type } from '@nestjs/common';
+import { exit } from 'process';
+
+import { DynamicModule, ModuleMetadata, Provider, Type } from '@nestjs/common';
 import { getDataSourceToken, TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSource, ObjectType } from 'typeorm';
 
-import { UniqueTreeConstraint } from '@/modules/database/constraints';
+import { UniqueTreeConstraint, UniqueTreeExistConstraint } from '@/modules/database/constraints';
+
+import { ModuleBuilder } from '../core/decorators';
 
 import { CUSTOM_REPOSITORY_METADATA } from './constants';
 import { DataExistConstraint, UniqueExistContraint } from './constraints';
 import { UniqueConstraint } from './constraints/unique.constraint';
+import { DbConfig } from './types';
 
-@Module({})
-export class DatabaseModule {
-    static forRoot(configRegister: () => TypeOrmModuleOptions): DynamicModule {
-        return {
-            global: true,
-            module: DatabaseModule,
-            imports: [TypeOrmModule.forRoot(configRegister())],
-            providers: [
-                DataExistConstraint,
-                UniqueConstraint,
-                UniqueExistContraint,
-                UniqueTreeConstraint,
-            ],
-        };
+@ModuleBuilder(async (configure) => {
+    const imports: ModuleMetadata['imports'] = [];
+
+    if (!configure.has('database')) {
+        throw new Error('Database config not exists or not right!');
+        exit(1);
     }
-
+    const { connections } = await configure.get<DbConfig>('database');
+    for (const dbOption of connections) {
+        imports.push(TypeOrmModule.forRoot(dbOption as TypeOrmModuleOptions));
+    }
+    const providers: ModuleMetadata['providers'] = [
+        DataExistConstraint,
+        UniqueConstraint,
+        UniqueExistContraint,
+        UniqueTreeConstraint,
+        UniqueTreeExistConstraint,
+    ];
+    return {
+        global: true,
+        imports,
+        providers,
+    };
+})
+export class DatabaseModule {
     /**
      * 注册自定义Repository
      * @param repositories 需要注册的自定义类列表

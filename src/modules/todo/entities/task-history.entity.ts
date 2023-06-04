@@ -14,6 +14,8 @@ export class TaskHistoryEntity extends BaseEntity {
     @Column({ comment: '操作时间', type: 'timestamp' })
     operationTime: Date;
 
-    @ManyToOne(() => TaskEntity, (task) => task.histories)
+    @ManyToOne(() => TaskEntity, (task) => task.histories, {
+        onDelete: 'CASCADE',
+    })
     task: TaskEntity;
 }

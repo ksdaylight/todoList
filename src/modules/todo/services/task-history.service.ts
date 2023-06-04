@@ -1,9 +1,12 @@
+import { Injectable } from '@nestjs/common';
+
 import { BaseService } from '@/modules/database/base';
 
 import { QueryTaskHistoryDto } from '../dtos';
 import { TaskHistoryEntity } from '../entities';
 import { TaskHistoryRepository, TaskRepository } from '../repositories';
 
+@Injectable()
 export class TaskHistoryService extends BaseService<TaskHistoryEntity, TaskHistoryRepository> {
     protected enableTrash = true;
 
@@ -18,8 +21,8 @@ export class TaskHistoryService extends BaseService<TaskHistoryEntity, TaskHisto
         const { taskId } = data;
 
         const histories = await this.repository
-            .createQueryBuilder('taskHistory')
-            .where('taskHistory.task = :taskId', { taskId })
+            .buildBaseQB()
+            .where('taskHistory.task.id = :taskId', { taskId })
             .orderBy('taskHistory.operationTime', 'DESC')
             .getMany();
 

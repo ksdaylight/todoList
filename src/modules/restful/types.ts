@@ -2,6 +2,8 @@ import { Type } from '@nestjs/common';
 import { ExternalDocumentationObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { ClassTransformOptions } from 'class-transformer';
 
+import { Configure } from '../core/configure';
+
 import {
     ListWithTrashedQueryDto,
     DeleteWithTrashDto,
@@ -11,7 +13,7 @@ import {
 } from './dtos';
 
 /**
- * CURD控制器方法列表
+ * CRUD控制器方法列表
  */
 export type CrudMethod = 'detail' | 'delete' | 'restore' | 'list' | 'store' | 'update';
 
@@ -19,6 +21,11 @@ export type CrudMethod = 'detail' | 'delete' | 'restore' | 'list' | 'store' | 'u
  * CRUD装饰器的方法选项
  */
 export interface CrudMethodOption {
+    /**
+     * 该方法是否允许匿名访问
+     */
+    allowGuest?: boolean;
+    /**
     /**
      * 序列化选项,如果为`noGroup`则不传参数，否则根据`id`+方法匹配来传参
      */
@@ -36,15 +43,15 @@ export interface CrudItem {
 /**
  * CRUD装饰器选项
  */
-export interface CurdOptions {
+export interface CrudOptions {
     id: string;
-    // 需要启用的方法
     enabled: Array<CrudMethod | CrudItem>;
-    // 一些方法要使用到的自定义DTO
     dtos: {
         [key in CrudMethod]?: Type<any>;
     };
 }
+
+export type CrudOptionsRegister = (configure: Configure) => CrudOptions | Promise<CrudOptions>;
 
 /**
  * API配置
