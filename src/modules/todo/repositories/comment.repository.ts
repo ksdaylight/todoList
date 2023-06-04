@@ -6,11 +6,12 @@ import { BaseTreeRepository } from '@/modules/database/base';
 import { CustomRepository } from '@/modules/database/decorators';
 import { QueryParams } from '@/modules/database/types';
 
+import { QueryAlias } from '../constants';
 import { CommentEntity } from '../entities';
 
 @CustomRepository(CommentEntity)
 export class CommentRepository extends BaseTreeRepository<CommentEntity> {
-    protected _qbName = 'comment';
+    protected _qbName = QueryAlias.COMMENT;
 
     protected orderBy = 'createdAt';
 

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsUUID } from 'class-validator';
 
 import { DtoValidation } from '@/modules/core/decorators';
+import { BaseResponseDto } from '@/modules/restful/dtos';
 
 @DtoValidation({ type: 'query' })
 export class QueryTaskHistoryDto {
@@ -21,4 +22,11 @@ export class QueryTaskHistoryDto {
     })
     taskId!: string;
 }
-// TODO responseDto
+
+export class QueryTaskHistoryResponseDto extends BaseResponseDto {
+    @ApiProperty({ description: '操作描述' })
+    description: string;
+
+    @ApiProperty({ description: '操作日期' })
+    operationTime: Date;
+}

@@ -9,7 +9,7 @@ import { BaseService } from '@/modules/database/base';
 import { paginate } from '@/modules/database/helpers';
 import { PaginateOptions, PaginateReturn, QueryHook } from '@/modules/database/types';
 
-import { TaskOrderType, TaskStatus } from '../constants';
+import { QueryAlias, TaskOrderType, TaskStatus } from '../constants';
 import {
     CreateTaskWithSubTasksDto,
     ManageCreateTaskWithSubTasksDto,
@@ -36,16 +36,17 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository, FindPar
     }
 
     async detail(id: string, callback?: QueryHook<TaskEntity>): Promise<TaskEntity> {
+        const qbAlias = this.repository.qbName;
         let qb = this.repository
             .buildBaseQB()
-            .leftJoinAndSelect(`${this.repository.qbName}.children`, 'children')
-            .leftJoinAndSelect(`${this.repository.qbName}.histories`, 'histories')
-            .leftJoinAndSelect(`${this.repository.qbName}.creator`, 'creator')
-            .leftJoinAndSelect(`${this.repository.qbName}.distributor`, 'distributor')
-            .leftJoinAndSelect(`${this.repository.qbName}.assignees`, 'assignees')
-            .leftJoinAndSelect(`${this.repository.qbName}.watchers`, 'watchers')
-            .leftJoinAndSelect(`${this.repository.qbName}.comments`, 'comments')
-            .where(`${this.repository.qbName}.id = :id`, { id });
+            .leftJoinAndSelect(`${qbAlias}.children`, 'children')
+            .leftJoinAndSelect(`${qbAlias}.histories`, 'histories')
+            .leftJoinAndSelect(`${qbAlias}.creator`, 'creator')
+            .leftJoinAndSelect(`${qbAlias}.distributor`, 'distributor')
+            .leftJoinAndSelect(`${qbAlias}.assignees`, 'assignees')
+            .leftJoinAndSelect(`${qbAlias}.watchers`, 'watchers')
+            .leftJoinAndSelect(`${qbAlias}.comments`, 'comments')
+            .where(`${qbAlias}.id = :id`, { id });
         qb = !isNil(callback) && isFunction(callback) ? await callback(qb) : qb;
         const item = await qb.getOne();
         if (!item) throw new EntityNotFoundError(TaskEntity, `The Task ${id} does not exist!`);
@@ -243,23 +244,24 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository, FindPar
         callback?: QueryHook<TaskEntity>,
     ): Promise<SelectQueryBuilder<TaskEntity>> {
         const {
-            creator,
-            distributor,
-            assignees,
+            creatorId: creator,
+            distributorId: distributor,
+            assigneesIds: assignees,
             watchers,
-            status,
+            isCompleted: status,
             dueDate,
             createdTime,
             orderBy,
             onlyRoots,
         } = options;
         const qb = await super.buildListQB(queryBuilder, options, callback);
+        qb.leftJoinAndSelect(`${QueryAlias.TASK}.assignees`, 'assignees');
 
         if (creator) {
-            qb.andWhere('task.creator.id = :creator', { creator });
+            qb.andWhere(`${QueryAlias.TASK}.creator.id = :creator`, { creator });
         }
         if (distributor) {
-            qb.andWhere('task.distributor.id = :distributor', { distributor });
+            qb.andWhere(`${QueryAlias.TASK}.distributor.id = :distributor`, { distributor });
         }
         if (assignees) {
             // 长度暂不考虑
@@ -270,12 +272,9 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository, FindPar
                 assigneesArray = assignees;
             }
 
-            qb.leftJoinAndSelect('task.assignees', 'assignees').andWhere(
-                'assignees.id IN (:...assigneesArray)',
-                {
-                    assigneesArray,
-                },
-            );
+            qb.andWhere('assignees.id IN (:...assigneesArray)', {
+                assigneesArray,
+            });
         }
         if (watchers) {
             let watchersArray;
@@ -284,24 +283,24 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository, FindPar
             } else {
                 watchersArray = watchers;
             }
-            qb.innerJoinAndSelect('task.watchers', 'watchers').andWhere(
+            qb.innerJoinAndSelect(`${QueryAlias.TASK}.watchers`, 'watchers').andWhere(
                 'watchers.id IN (:...watchersArray )',
                 { watchersArray },
             );
         }
         if (!isNil(status)) {
-            qb.andWhere('task.status = :status', {
+            qb.andWhere(`${QueryAlias.TASK}.status = :status`, {
                 status: toBoolean(status) ? TaskStatus.COMPLETED : TaskStatus.INCOMPLETE,
             });
         }
         if (dueDate) {
-            qb.andWhere('task.dueDate <= :dueDate', { dueDate });
+            qb.andWhere(`${QueryAlias.TASK}.dueDate <= :dueDate`, { dueDate });
         }
         if (createdTime) {
-            qb.andWhere('task.createdTime >= :createdTime', { createdTime });
+            qb.andWhere(`${QueryAlias.TASK}.createdTime >= :createdTime`, { createdTime });
         }
-        if (onlyRoots) {
-            qb.andWhere('task.parent IS NULL');
+        if (toBoolean(onlyRoots)) {
+            qb.andWhere(`${QueryAlias.TASK}.parent IS NULL`);
         }
         this.addOrderByQuery(qb, orderBy);
         // 等等...
@@ -316,11 +315,13 @@ export class TaskService extends BaseService<TaskEntity, TaskRepository, FindPar
     protected addOrderByQuery(qb: SelectQueryBuilder<TaskEntity>, orderBy?: TaskOrderType) {
         switch (orderBy) {
             case TaskOrderType.CREATED:
-                return qb.orderBy('task.createdAt', 'DESC');
+                return qb.orderBy(`${QueryAlias.TASK}.createdAt`, 'DESC');
             case TaskOrderType.DUE_DATE:
-                return qb.orderBy('task.dueDate', 'DESC');
+                return qb.orderBy(`${QueryAlias.TASK}.dueDate`, 'DESC');
             default:
-                return qb.orderBy('task.createdAt', 'DESC').addOrderBy('task.dueDate', 'DESC');
+                return qb
+                    .orderBy(`${QueryAlias.TASK}.createdAt`, 'DESC')
+                    .addOrderBy('task.dueDate', 'DESC');
         }
     }
 }

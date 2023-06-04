@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { BaseService } from '@/modules/database/base';
 
+import { QueryAlias } from '../constants';
 import { QueryTaskHistoryDto } from '../dtos';
 import { TaskHistoryEntity } from '../entities';
 import { TaskHistoryRepository, TaskRepository } from '../repositories';
@@ -22,8 +23,8 @@ export class TaskHistoryService extends BaseService<TaskHistoryEntity, TaskHisto
 
         const histories = await this.repository
             .buildBaseQB()
-            .where('taskHistory.task.id = :taskId', { taskId })
-            .orderBy('taskHistory.operationTime', 'DESC')
+            .where(`${QueryAlias.TASK_HISTORY}.task.id = :taskId`, { taskId })
+            .orderBy(`${QueryAlias.TASK_HISTORY}.operationTime`, 'DESC')
             .getMany();
 
         return histories;

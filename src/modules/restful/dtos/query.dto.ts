@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
 
@@ -45,4 +45,30 @@ export class ListWithTrashedQueryDto extends ListQueryDto implements TrashedOpti
     @IsEnum(SelectTrashMode)
     @IsOptional()
     trashed?: SelectTrashMode;
+}
+
+export class BaseResponseDto {
+    @ApiProperty()
+    id: string;
+}
+export class MetaDto {
+    @ApiProperty({ description: '当前页项目数量' })
+    totalItems: number;
+
+    @ApiProperty({ description: '项目总数量' })
+    itemCount: number;
+
+    @ApiProperty({ description: '每页显示数量' })
+    perPage: number;
+
+    @ApiProperty({ description: '总页数' })
+    totalPages: number;
+
+    @ApiProperty({ description: '当前页数' })
+    currentPage: number;
+}
+
+export abstract class PaginatedResponseDto {
+    @ApiProperty({ type: () => MetaDto })
+    meta: MetaDto;
 }

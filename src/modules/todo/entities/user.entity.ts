@@ -12,6 +12,8 @@ import {
 
 import { BaseEntity } from '@/modules/database/base';
 
+import { TransformerId } from '../constants';
+
 import { CommentEntity } from './comment.entity';
 import { MessageEntity } from './message.entity';
 import { MessageReceiverEntity } from './receiver.entity';
@@ -24,14 +26,21 @@ import { TaskEntity } from './task.entity';
 @Exclude()
 @Entity('users')
 export class UserEntity extends BaseEntity {
-    @Expose()
+    @Expose({
+        groups: [
+            'user-detail',
+            'user-list',
+            `${TransformerId.TASK}-list`,
+            `${TransformerId.TASK}-detail`,
+        ],
+    })
     @Column({
         comment: '姓名',
         nullable: true,
     })
     nickname?: string;
 
-    @Expose()
+    @Expose({ groups: ['user-detail', 'user-list', `${TransformerId.TASK}-detail`] })
     @Column({ comment: '用户名', unique: true })
     username!: string;
 

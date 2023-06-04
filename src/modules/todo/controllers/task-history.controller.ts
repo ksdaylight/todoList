@@ -1,12 +1,12 @@
 import { Controller, Get, Query, SerializeOptions } from '@nestjs/common';
 
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { BaseControllerWithTrash } from '@/modules/restful/base';
 
 import { Depends } from '@/modules/restful/decorators';
 
-import { QueryTaskHistoryDto } from '../dtos';
+import { QueryTaskHistoryDto, QueryTaskHistoryResponseDto } from '../dtos';
 import { TaskHistoryService } from '../services';
 import { TodoModule } from '../todo.module';
 
@@ -20,8 +20,8 @@ export class TaskHistoryController extends BaseControllerWithTrash<TaskHistorySe
 
     @Get('task')
     @ApiOperation({ summary: '查询任务的历史记录' })
-    // @ApiOkResponse({ type: [BoxResponseDto] })
-    @SerializeOptions({ groups: [] }) // `${TransformerId.STORAGE_BOX}-create`
+    @ApiOkResponse({ type: [QueryTaskHistoryResponseDto] })
+    @SerializeOptions({ groups: [] })
     async queryTaskHistory(
         @Query()
         data: QueryTaskHistoryDto,

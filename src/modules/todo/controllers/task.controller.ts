@@ -7,7 +7,14 @@ import { Crud, Depends } from '@/modules/restful/decorators';
 
 import { createHookOption } from '@/modules/restful/helpers';
 
-import { ManageCreateTaskWithSubTasksDto, ManageUpdateTaskDto, QueryTaskDto } from '../dtos';
+import { TransformerId } from '../constants';
+import {
+    ManageCreateTaskWithSubTasksDto,
+    ManageUpdateTaskDto,
+    QueryTaskPaginatedDto,
+    QueryTaskDto,
+    TaskDetailResponseDto,
+} from '../dtos';
 import { TaskService } from '../services';
 import { TodoModule } from '../todo.module';
 
@@ -17,45 +24,48 @@ import { TodoModule } from '../todo.module';
 @ApiTags('任务管理')
 @Depends(TodoModule)
 @Crud(async () => ({
-    id: 'task',
+    id: TransformerId.TASK,
     enabled: [
         {
             name: 'list',
             option: createHookOption({
                 summary: '任务查询,以分页模式展示',
-                // apiOkResponse: EntryOrderPaginatedDto,
+                apiOkResponse: QueryTaskPaginatedDto,
             }),
         },
         {
             name: 'detail',
             option: createHookOption({
                 summary: '任务详情',
-                // apiOkResponse: EntryOrderDetailResponseDto,
+                apiOkResponse: TaskDetailResponseDto,
             }),
         },
         {
             name: 'store',
             option: createHookOption({
                 summary: '新增任务',
-                // apiOkResponse: EntryOrderDetailResponseDto,
+                apiOkResponse: TaskDetailResponseDto,
             }),
         },
         {
             name: 'update',
-            option: createHookOption('修改任务'),
+            option: createHookOption({
+                summary: '修改任务',
+                apiOkResponse: TaskDetailResponseDto,
+            }),
         },
         {
             name: 'delete',
             option: createHookOption({
                 summary: '删除任务',
-                // apiOkResponse: [EntryOrderQueryResponseDto],
+                apiOkResponse: [TaskDetailResponseDto],
             }),
         },
         {
             name: 'restore',
             option: createHookOption({
                 summary: '恢复任务',
-                // apiOkResponse: [EntryOrderQueryResponseDto],
+                apiOkResponse: [TaskDetailResponseDto],
             }),
         },
     ],
